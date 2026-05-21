@@ -173,9 +173,11 @@ router.post("/webhook/whatsapp", async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error("[WEBHOOK]", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[WEBHOOK ERROR]", msg, error);
     res.status(400).json({
       status: "ignored",
-      error: "No se pudo procesar el mensaje",
+      error: msg,
     });
   }
 });
