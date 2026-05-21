@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { env } from "./env.js";
+import { encrypt } from "../utils/crypto.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -114,4 +115,34 @@ export async function runMigrations(): Promise<void> {
 
   saveDB();
   console.log("✅ Base de datos inicializada");
+
+  // Auto-seed si la DB está vacía (primera ejecución)
+  const count = db.exec("SELECT COUNT(*) AS c FROM usuarios");
+  const total = count[0]?.values[0]?.[0] ?? 0;
+  if (Number(total) === 0) {
+    console.log("🌱 Sembrando datos de prueba...");
+    const tokenCifrado = encrypt("mock-token-facturador-123");
+    db.run(
+      `INSERT INTO usuarios (telefono_whatsapp, rut_emisor, nombre, token_api_facturador, created_at, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ["59899123456", "2198765400012", "Juan Pérez", tokenCifrado]
+    );
+    db.run(
+      `INSERT INTO clientes_frecuentes (usuario_id, razon_social, rut, created_at)
+       VALUES (1, ?, ?, datetime('now'))`,
+      ["TechSolutions S.A.", "2198765400012"]
+    );
+    db.run(
+      `INSERT INTO clientes_frecuentes (usuario_id, razon_social, rut, created_at)
+       VALUES (1, ?, ?, datetime('now'))`,
+      ["Distribuidora del Sur Ltda.", "2155566600019"]
+    );
+    db.run(
+      `INSERT INTO clientes_frecuentes (usuario_id, razon_social, rut, created_at)
+       VALUES (1, ?, ?, datetime('now'))`,
+      ["Estudio Jurídico Martínez", "2144477700015"]
+    );
+    saveDB();
+    console.log("✅ Datos de prueba insertados");
+  }
 }
